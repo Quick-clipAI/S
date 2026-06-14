@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QuickClips AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;
+  --bg2:#10101a;
+  --bg3:#16162a;
+  --bg4:#1c1c32;
+  --purple:#7c6ef7;
+  --purple-dim:#5a50c8;
+  --purple-glow:rgba(124,110,247,0.15);
+  --purple-border:rgba(124,110,247,0.3);
+  --indigo:#4f46e5;
+  --text:#e8e8f0;
+  --text-dim:#8888aa;
+  --text-muted:#4a4a6a;
+  --green:#22c55e;
+  --red:#ef4444;
+  --yellow:#f59e0b;
+  --border:rgba(255,255,255,0.07);
+  --radius:12px;
+  --radius-sm:8px;
+  --sidebar-w:280px;
+  --transition:0.2s ease;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.5;overflow:hidden}
+button{font-family:'Inter',sans-serif;cursor:pointer;border:none;outline:none}
+input,textarea{font-family:'Inter',sans-serif;outline:none}
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* ── TOAST ── */
+#toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:360px;width:90%}
+.toast{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;color:var(--text);box-shadow:0 4px 24px rgba(0,0,0,0.5);animation:toastIn 0.3s ease;display:flex;align-items:center;gap:8px}
+.toast.success{border-color:rgba(34,197,94,0.4)}
+.toast.error{border-color:rgba(239,68,68,0.4)}
+.toast.warning{border-color:rgba(245,158,11,0.4)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── OVERLAY (setup) ── */
+#setup-overlay{position:fixed;inset:0;background:rgba(10,10,15,0.97);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+#setup-overlay.hidden{display:none}
+.setup-box{background:var(--bg2);border:1px solid var(--purple-border);border-radius:16px;padding:36px;max-width:420px;width:100%;box-shadow:0 0 60px rgba(124,110,247,0.15)}
+.setup-logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;background:linear-gradient(135deg,#fff 0%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.setup-sub{color:var(--text-dim);font-size:13px;margin-bottom:28px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text-dim);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
+.field input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:13px;transition:border-color var(--transition)}
+.field input:focus{border-color:var(--purple-border)}
+.btn-primary{width:100%;background:var(--purple);color:#fff;border-radius:var(--radius-sm);padding:12px;font-size:14px;font-weight:600;transition:background var(--transition),transform var(--transition)}
+.btn-primary:hover{background:var(--purple-dim)}
+.btn-primary:active{transform:scale(0.98)}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none}
+
+/* ── LAYOUT ── */
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+#sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:transform var(--transition)}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;background:linear-gradient(135deg,#fff 0%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-actions{display:flex;gap:6px}
+.icon-btn{background:transparent;color:var(--text-dim);width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:16px;transition:background var(--transition),color var(--transition)}
+.icon-btn:hover{background:var(--bg3);color:var(--text)}
+.sidebar-body{flex:1;overflow-y:auto;padding:12px}
+.sidebar-empty{color:var(--text-muted);font-size:12px;text-align:center;padding:40px 16px;line-height:1.7}
+.video-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color var(--transition),background var(--transition)}
+.video-item:hover{border-color:var(--purple-border);background:var(--bg4)}
+.video-item.active{border-color:var(--purple);background:var(--purple-glow)}
+.vi-type{font-size:10px;color:var(--purple);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.vi-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vi-date{font-size:11px;color:var(--text-muted)}
+.sidebar-new-btn{margin:12px;flex-shrink:0}
+.btn-new{width:100%;background:linear-gradient(135deg,var(--purple) 0%,var(--indigo) 100%);color:#fff;border-radius:var(--radius-sm);padding:11px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity var(--transition),transform var(--transition)}
+.btn-new:hover{opacity:0.9}
+.btn-new:active{transform:scale(0.98)}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+#main-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--bg2)}
+.hamburger{display:none;background:transparent;color:var(--text-dim);width:32px;height:32px;border-radius:var(--radius-sm);align-items:center;justify-content:center;font-size:18px}
+.main-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:var(--text);flex:1}
+.main-title span{color:var(--text-muted);font-weight:400;font-size:13px;margin-left:8px}
+#main-content{flex:1;overflow-y:auto;padding:20px}
+
+/* ── WELCOME ── */
+#welcome-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:16px}
+.welcome-icon{font-size:48px;margin-bottom:8px}
+.welcome-h{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;background:linear-gradient(135deg,#fff 0%,var(--purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.welcome-p{color:var(--text-dim);font-size:14px;max-width:320px}
+.welcome-cta{background:linear-gradient(135deg,var(--purple) 0%,var(--indigo) 100%);color:#fff;border-radius:var(--radius-sm);padding:12px 28px;font-size:14px;font-weight:600;margin-top:8px;transition:opacity var(--transition),transform var(--transition)}
+.welcome-cta:hover{opacity:0.9}
+.welcome-cta:active{transform:scale(0.98)}
+
+/* ── WORKSPACE ── */
+#workspace{display:none}
+.ws-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.ws-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.ws-section-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
+.ws-section-title .badge{background:var(--purple-glow);border:1px solid var(--purple-border);color:var(--purple);font-size:10px;padding:2px 8px;border-radius:20px;font-family:'Inter',sans-serif;font-weight:500}
+
+/* ── SCENE CARDS ── */
+.scenes-grid{display:flex;flex-direction:column;gap:10px}
+.scene-card{background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--text-muted);border-radius:var(--radius-sm);padding:14px;transition:border-color var(--transition)}
+.scene-card.status-ready{border-left-color:var(--green)}
+.scene-card.status-failed{border-left-color:var(--red)}
+.scene-card.status-generating{border-left-color:var(--purple);animation:pulse-border 1.5s ease infinite}
+.scene-card.status-pending{border-left-color:var(--text-muted)}
+.scene-card.status-cancelled{border-left-color:var(--yellow);opacity:0.6}
+@keyframes pulse-border{0%,100%{border-left-color:var(--purple)}50%{border-left-color:var(--indigo)}}
+.sc-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sc-num{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--text-muted);background:var(--bg4);padding:2px 8px;border-radius:20px}
+.sc-status{font-size:12px;color:var(--text-dim)}
+.sc-badges{display:flex;gap:6px;margin-left:auto;align-items:center}
+.badge-voice{font-size:10px;background:var(--bg4);border:1px solid var(--border);color:var(--text-dim);padding:2px 8px;border-radius:20px;text-transform:capitalize}
+.badge-retry{font-size:11px;background:transparent;border:1px solid var(--red);color:var(--red);padding:2px 8px;border-radius:20px;cursor:pointer;transition:background var(--transition)}
+.badge-retry:hover{background:rgba(239,68,68,0.1)}
+.sc-body{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sc-field label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;display:block}
+.sc-field .editable{font-size:13px;color:var(--text);background:var(--bg4);border:1px solid transparent;border-radius:6px;padding:6px 8px;min-height:40px;cursor:text;transition:border-color var(--transition);word-break:break-word}
+.sc-field .editable:focus{border-color:var(--purple-border);outline:none;cursor:text}
+.sc-field .editable[contenteditable="false"]{cursor:default;background:var(--bg3)}
+.sc-pexels{margin-top:8px;display:flex;align-items:center;gap:6px}
+.sc-pexels label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.sc-pexels span{font-size:12px;color:var(--text-dim)}
+.sc-countdown{font-size:11px;color:var(--yellow);margin-top:6px;font-style:italic}
+
+/* ── PREVIEW ── */
+.preview-grid{display:flex;flex-direction:column;gap:12px}
+.preview-scene{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.preview-scene-head{font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px}
+.preview-media{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.preview-media video{width:100%;height:140px;object-fit:cover;border-radius:6px;background:#000;border:1px solid var(--border)}
+.audio-wrap{display:flex;flex-direction:column;justify-content:center;gap:8px}
+.audio-wrap audio{width:100%;height:36px;border-radius:6px}
+.preview-caption{font-size:12px;color:var(--text-dim);margin-top:8px;font-style:italic}
+.no-video-msg{background:var(--bg4);border:1px solid var(--border);border-radius:6px;height:140px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-muted);text-align:center;padding:12px}
+
+/* ── ACTIONS BAR ── */
+.actions-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn-action{padding:10px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all var(--transition)}
+.btn-approve{background:var(--purple);color:#fff}
+.btn-approve:hover{background:var(--purple-dim)}
+.btn-approve:disabled{opacity:0.4;cursor:not-allowed}
+.btn-cancel{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3)}
+.btn-cancel:hover{background:rgba(239,68,68,0.25)}
+.btn-download{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.3)}
+.btn-download:hover{background:rgba(34,197,94,0.25)}
+.btn-download:disabled{opacity:0.4;cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-outline:hover{background:var(--bg3);color:var(--text)}
+.gen-status{font-size:12px;color:var(--text-dim);padding:8px 0}
+
+/* ── MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,10,15,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal-backdrop.hidden{display:none}
+.modal-box{background:var(--bg2);border:1px solid var(--purple-border);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 0 60px rgba(124,110,247,0.12);max-height:85vh;overflow-y:auto}
+.modal-title{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;margin-bottom:6px}
+.modal-sub{color:var(--text-dim);font-size:13px;margin-bottom:20px}
+.content-types{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.ct-btn{background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;font-weight:500;color:var(--text-dim);text-align:left;transition:all var(--transition);cursor:pointer;line-height:1.4}
+.ct-btn:hover{border-color:var(--purple-border);color:var(--text)}
+.ct-btn.selected{border-color:var(--purple);background:var(--purple-glow);color:var(--purple)}
+.length-opts{display:flex;gap:8px;margin-bottom:20px}
+.len-btn{flex:1;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 4px;font-size:12px;font-weight:500;color:var(--text-dim);transition:all var(--transition);cursor:pointer;text-align:center}
+.len-btn:hover{border-color:var(--purple-border)}
+.len-btn.selected{border-color:var(--purple);background:var(--purple-glow);color:var(--purple)}
+.modal-field{margin-bottom:16px}
+.modal-field label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
+.modal-field input,.modal-field textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:13px;transition:border-color var(--transition);resize:none}
+.modal-field input:focus,.modal-field textarea:focus{border-color:var(--purple-border)}
+.modal-actions{display:flex;gap:10px;margin-top:4px}
+.modal-actions .btn-action{flex:1;text-align:center}
+
+/* ── SETTINGS MODAL ── */
+#settings-modal .modal-box{max-width:380px}
+
+/* ── SIDEBAR OVERLAY (mobile) ── */
+#sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:none}
+
+/* ── MOBILE ── */
+@media(max-width:700px){
+  #sidebar{position:fixed;top:0;left:0;bottom:0;z-index:200;transform:translateX(-100%);width:min(var(--sidebar-w),85vw)}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  .hamburger{display:flex}
+  #main{width:100%}
+  .sc-body{grid-template-columns:1fr}
+  .preview-media{grid-template-columns:1fr}
+  .content-types{grid-template-columns:1fr}
+  .modal-actions{flex-direction:column}
+}
+@media(max-width:500px){
+  .length-opts{gap:6px}
+  .len-btn{font-size:11px;padding:7px 2px}
+}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:4px 0 16px}
+
+/* ── STORAGE BAR ── */
+.storage-bar{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px;margin:12px}
+.storage-bar .label{font-size:11px;color:var(--text-muted);flex:1}
+.storage-track{height:4px;background:var(--bg4);border-radius:2px;flex:1;overflow:hidden}
+.storage-fill{height:100%;background:var(--purple);border-radius:2px;transition:width 0.4s ease}
+.storage-fill.warn{background:var(--yellow)}
+.storage-fill.danger{background:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- Setup Overlay -->
+<div id="setup-overlay">
+  <div class="setup-box">
+    <div class="setup-logo">⚡ QuickClips AI</div>
+    <p class="setup-sub">Enter your API keys to get started. These are saved locally on your device.</p>
+    <div class="field"><label>Gemini API Key</label><input type="password" id="setup-gemini" placeholder="AIza..."/></div>
+    <div class="field"><label>ElevenLabs API Key</label><input type="password" id="setup-elevenlabs" placeholder="sk_..."/></div>
+    <div class="field"><label>Pexels API Key</label><input type="password" id="setup-pexels" placeholder="Your Pexels key..."/></div>
+    <button class="btn-primary" onclick="window.App.saveSetup()">Save & Launch</button>
+  </div>
+</div>
+
+<!-- New Video Modal -->
+<div id="new-modal" class="modal-backdrop hidden">
+  <div class="modal-box">
+    <div class="modal-title">✨ New Short Video</div>
+    <p class="modal-sub">Pick a content type and describe your topic.</p>
+    <div class="modal-field"><label>Content Type</label></div>
+    <div class="content-types" id="ct-grid"></div>
+    <div class="modal-field">
+      <label>Topic / Niche</label>
+      <input type="text" id="modal-topic" placeholder="e.g. 'A creepy unsolved disappearance'"/>
+    </div>
+    <div class="modal-field"><label>Video Length</label></div>
+    <div class="length-opts" id="len-opts">
+      <button class="len-btn selected" data-len="15">15s</button>
+      <button class="len-btn" data-len="30">30s</button>
+      <button class="len-btn" data-len="45">45s</button>
+      <button class="len-btn" data-len="60">60s</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-action btn-outline" onclick="window.UI.closeNewModal()">Cancel</button>
+      <button class="btn-action btn-approve" id="gen-script-btn" onclick="window.App.generateScript()">Generate Script →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal-backdrop hidden">
+  <div class="modal-box">
+    <div class="modal-title">⚙️ API Keys</div>
+    <p class="modal-sub">Update any key below. Changes are saved immediately.</p>
+    <div class="field"><label>Gemini API Key</label><input type="password" id="s-gemini" placeholder="AIza..."/></div>
+    <div class="field"><label>ElevenLabs API Key</label><input type="password" id="s-elevenlabs" placeholder="sk_..."/></div>
+    <div class="field"><label>Pexels API Key</label><input type="password" id="s-pexels" placeholder="Your Pexels key..."/></div>
+    <div class="modal-actions" style="margin-top:8px">
+      <button class="btn-action btn-outline" onclick="window.UI.closeSettings()">Close</button>
+      <button class="btn-action btn-approve" onclick="window.App.saveSettings()">Save Keys</button>
+    </div>
+  </div>
+</div>
+
+<div id="sidebar-overlay" onclick="window.UI.closeSidebar()"></div>
+
+<!-- App -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <span class="logo">⚡ QuickClips</span>
+      <div class="sidebar-actions">
+        <button class="icon-btn" title="Settings" onclick="window.UI.openSettings()">⚙️</button>
+      </div>
+    </div>
+    <div class="storage-bar">
+      <span class="label" id="storage-label">0 / 20 videos</span>
+      <div class="storage-track"><div class="storage-fill" id="storage-fill" style="width:0%"></div></div>
+    </div>
+    <div class="sidebar-body" id="video-list">
+      <p class="sidebar-empty">No videos yet.<br/>Create your first short!</p>
+    </div>
+    <div class="sidebar-new-btn">
+      <button class="btn-new" onclick="window.UI.openNewModal()">＋ New Video</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="main-header">
+      <button class="hamburger icon-btn" onclick="window.UI.openSidebar()">☰</button>
+      <div class="main-title" id="main-title">Dashboard <span>Ready to create</span></div>
+      <button class="icon-btn" onclick="window.UI.openSettings()" style="display:none" id="header-settings">⚙️</button>
+    </div>
+    <div id="main-content">
+      <!-- Welcome -->
+      <div id="welcome-state">
+        <div class="welcome-icon">🎬</div>
+        <div class="welcome-h">Create Faceless Shorts</div>
+        <p class="welcome-p">Generate AI scripts, voiceovers, and find background videos — all in one click.</p>
+        <button class="welcome-cta" onclick="window.UI.openNewModal()">＋ Create Your First Video</button>
+      </div>
+
+      <!-- Workspace -->
+      <div id="workspace">
+        <!-- Script Review -->
+        <div class="ws-section" id="script-section">
+          <div class="ws-section-head">
+            <div class="ws-section-title">📝 Script Review <span class="badge" id="scene-count-badge">0 scenes</span></div>
+            <button class="btn-action btn-outline" onclick="window.UI.openNewModal()" style="font-size:12px;padding:6px 14px">Edit Prompt</button>
+          </div>
+          <div class="scenes-grid" id="scenes-grid"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="ws-section" id="actions-section">
+          <div class="actions-bar">
+            <button class="btn-action btn-approve" id="approve-btn" onclick="window.App.startGeneration()">🚀 Approve & Generate</button>
+            <button class="btn-action btn-cancel" id="cancel-btn" style="display:none" onclick="window.App.cancelGeneration()">✕ Cancel</button>
+            <button class="btn-action btn-download" id="download-btn" disabled onclick="window.App.downloadZip()">⬇ Download ZIP</button>
+          </div>
+          <p class="gen-status" id="gen-status"></p>
+        </div>
+
+        <!-- Preview -->
+        <div class="ws-section" id="preview-section" style="display:none">
+          <div class="ws-section-head">
+            <div class="ws-section-title">▶️ Preview</div>
+            <button class="icon-btn" onclick="window.UI.hidePreview()" title="Close preview">✕</button>
+          </div>
+          <div class="preview-grid" id="preview-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<script type="module">
+// ═══════════════════════════════════════════
+// FIREBASE INIT
+// ═══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyB6bJLCJ67YrgdY7-SKaUAfBoH74ZINoZE",
+  authDomain: "quick-clip-4438c.firebaseapp.com",
+  projectId: "quick-clip-4438c",
+  databaseURL: "https://quick-clip-4438c-default-rtdb.firebaseio.com",
+  storageBucket: "quick-clip-4438c.firebasestorage.app",
+  messagingSenderId: "825753868450",
+  appId: "1:825753868450:web:914ccf557281c9601b9ffb"
+};
+
+let db = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+} catch(e) {
+  console.error('Firebase init failed:', e);
+}
+
+// ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const CONTENT_TYPES = [
+  { id:'fact',     label:'🧠 Daily Discovery / Fun Fact' },
+  { id:'wyr',      label:'🤔 Would You Rather' },
+  { id:'pyfdown',  label:'👇 Put Your Finger Down' },
+  { id:'quiz',     label:'❓ Daily Quiz' },
+  { id:'horror',   label:'😱 Horror / Mystery Story' },
+  { id:'advice',   label:'💬 Relationship / Life Advice' },
+];
+const MAX_VIDEOS = 20;
+const WARN_AT = 18;
+const ELEVENLABS_DELAY_MS = 22000;
+const FALLBACK_VOICE_ID = 'ErXwobaYiN019PkySvjV';
+const GEMINI_SYSTEM = `You are QuickClips AI — a faceless short video script writer for social media.
+
+Return ONLY valid JSON. No markdown, no explanation, no code blocks.
+
+JSON format:
+{
+  "title": "short catchy episode title",
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "captionText": "short punchy caption max 8 words, emojis allowed",
+      "voiceoverText": "natural conversational narration, emotions through words not stage directions",
+      "pexelsSearchTerm": "2-3 word visual search term",
+      "voiceTag": "male"
+    }
+  ]
+}
+
+Rules:
+- Scene 1 must hook immediately — never start slow
+- voiceoverText is natural speech: express emotions through words ("he slapped me so hard I saw stars") not tags like [angry] or [whisper]
+- captionText is separate from voiceover — short, punchy, emoji welcome
+- Each scene = 3-8 seconds of content. Match number of scenes to requested video length
+- pexelsSearchTerm must be specific and visual, not abstract ("woman crying rain" not "sadness")
+- voiceTag: use female or child only when story genuinely needs it, otherwise always male
+- End last scene with engagement bait (comment, follow, share)
+- Never return anything except the JSON object`;
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const State = {
+  geminiKey: '',
+  elevenKey: '',
+  pexelsKey: '',
+  voiceRegistry: { male: FALLBACK_VOICE_ID, female: FALLBACK_VOICE_ID, child: FALLBACK_VOICE_ID },
+  videos: {},           // Firebase loaded videos
+  currentVideoId: null,
+  currentScenes: [],    // active scene data during generation
+  selectedType: null,
+  selectedLength: 15,
+  isGenerating: false,
+  cancelRequested: false,
+  scriptData: null,     // parsed JSON from Gemini
+};
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function uid() {
+  return 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+async function arrayBufferToBase64(buffer) {
+  return new Promise((resolve) => {
+    const blob = new Blob([buffer]);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const b64 = reader.result.split(',')[1];
+      resolve(b64);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+function base64ToBlob(b64, mime) {
+  const bytes = atob(b64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function getAudioKey(videoId, sceneIdx) {
+  return `qc_audio_${videoId}_scene_${sceneIdx}`;
+}
+function lsSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch(e) {
+    Toast.warn('Storage full — some audio may not be saved.');
+    return false;
+  }
+}
+function lsGet(key) {
+  try { return localStorage.getItem(key); } catch(e) { return null; }
+}
+function lsRemove(key) {
+  try { localStorage.removeItem(key); } catch(e) {}
+}
+function sanitizeForZipName(s) {
+  return s.replace(/[^a-z0-9_\-\s]/gi, '').replace(/\s+/g, '_').slice(0, 40);
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+const Toast = {
+  show(msg, type='info', duration=3500) {
+    const container = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+    el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+    container.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, duration);
+  },
+  success(m) { this.show(m, 'success'); },
+  error(m)   { this.show(m, 'error', 5000); },
+  warn(m)    { this.show(m, 'warning'); },
+};
+
+// ═══════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════
+const UI = {
+  openNewModal() {
+    if (State.isGenerating) { Toast.warn('Generation in progress.'); return; }
+    this._buildCTGrid();
+    document.getElementById('modal-topic').value = '';
+    document.getElementById('new-modal').classList.remove('hidden');
+  },
+  closeNewModal() {
+    document.getElementById('new-modal').classList.add('hidden');
+  },
+  _buildCTGrid() {
+    const grid = document.getElementById('ct-grid');
+    grid.innerHTML = '';
+    CONTENT_TYPES.forEach(ct => {
+      const b = document.createElement('button');
+      b.className = 'ct-btn' + (State.selectedType === ct.id ? ' selected' : '');
+      b.textContent = ct.label;
+      b.onclick = () => {
+        State.selectedType = ct.id;
+        grid.querySelectorAll('.ct-btn').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+      };
+      grid.appendChild(b);
+    });
+    // length buttons
+    document.querySelectorAll('.len-btn').forEach(b => {
+      b.classList.toggle('selected', parseInt(b.dataset.len) === State.selectedLength);
+      b.onclick = () => {
+        State.selectedLength = parseInt(b.dataset.len);
+        document.querySelectorAll('.len-btn').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+      };
+    });
+  },
+  openSettings() {
+    document.getElementById('s-gemini').value = State.geminiKey ? '••••••••' : '';
+    document.getElementById('s-elevenlabs').value = State.elevenKey ? '••••••••' : '';
+    document.getElementById('s-pexels').value = State.pexelsKey ? '••••••••' : '';
+    document.getElementById('settings-modal').classList.remove('hidden');
+  },
+  closeSettings() {
+    document.getElementById('settings-modal').classList.add('hidden');
+  },
+  openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-overlay').classList.add('open');
+  },
+  closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  },
+  showWelcome() {
+    document.getElementById('welcome-state').style.display = 'flex';
+    document.getElementById('workspace').style.display = 'none';
+    document.getElementById('main-title').innerHTML = 'Dashboard <span>Ready to create</span>';
+  },
+  showWorkspace(title) {
+    document.getElementById('welcome-state').style.display = 'none';
+    document.getElementById('workspace').style.display = 'block';
+    document.getElementById('main-title').innerHTML = title ? `<span style="font-size:13px;color:var(--text-dim)">${title}</span>` : 'Workspace';
+  },
+  hidePreview() {
+    document.getElementById('preview-section').style.display = 'none';
+  },
+  renderSceneCards(scenes, editable=true) {
+    const grid = document.getElementById('scenes-grid');
+    grid.innerHTML = '';
+    document.getElementById('scene-count-badge').textContent = `${scenes.length} scenes`;
+    scenes.forEach((sc, i) => {
+      const card = document.createElement('div');
+      card.className = `scene-card status-${sc.status || 'pending'}`;
+      card.id = `scene-card-${i}`;
+      const statusIcon = { pending:'⏳', generating:'⏳', ready:'✅', failed:'❌', cancelled:'🚫' }[sc.status] || '⏳';
+      const canEdit = editable && !State.isGenerating;
+      card.innerHTML = `
+        <div class="sc-head">
+          <span class="sc-num">Scene ${sc.sceneNumber || i+1}</span>
+          <span class="sc-status" id="sc-status-${i}">${statusIcon} ${sc.statusLabel || 'Pending'}</span>
+          <div class="sc-badges">
+            <span class="badge-voice">${sc.voiceTag || 'male'}</span>
+            ${sc.status === 'failed' ? `<button class="badge-retry" onclick="window.App.retryScene(${i})">↺ Retry</button>` : ''}
+          </div>
+        </div>
+        <div class="sc-body">
+          <div class="sc-field">
+            <label>Caption</label>
+            <div class="editable" id="sc-caption-${i}" contenteditable="${canEdit}" spellcheck="false">${sc.captionText || ''}</div>
+          </div>
+          <div class="sc-field">
+            <label>Voiceover</label>
+            <div class="editable" id="sc-voiceover-${i}" contenteditable="${canEdit}" spellcheck="false">${sc.voiceoverText || ''}</div>
+          </div>
+        </div>
+        <div class="sc-pexels">
+          <label>Search:</label>
+          <span>${sc.pexelsSearchTerm || ''}</span>
+        </div>
+        ${sc.countdown ? `<p class="sc-countdown" id="sc-countdown-${i}">⏱ Next scene in ${sc.countdown}s...</p>` : `<p class="sc-countdown" id="sc-countdown-${i}" style="display:none"></p>`}
+      `;
+      grid.appendChild(card);
+    });
+  },
+  updateSceneStatus(i, status, label) {
+    const card = document.getElementById(`scene-card-${i}`);
+    if (!card) return;
+    const icons = { pending:'⏳', generating:'🎬', ready:'✅', failed:'❌', cancelled:'🚫' };
+    card.className = `scene-card status-${status}`;
+    const statusEl = document.getElementById(`sc-status-${i}`);
+    if (statusEl) statusEl.textContent = `${icons[status]||'⏳'} ${label}`;
+  },
+  showCountdown(i, seconds) {
+    const el = document.getElementById(`sc-countdown-${i}`);
+    if (!el) return;
+    if (seconds <= 0) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.textContent = `⏱ Next scene in ${seconds}s...`;
+  },
+  renderPreview(videoId, scenes) {
+    const section = document.getElementById('preview-section');
+    const grid = document.getElementById('preview-grid');
+    grid.innerHTML = '';
+    section.style.display = 'block';
+    scenes.forEach((sc, i) => {
+      const b64 = lsGet(getAudioKey(videoId, i));
+      const audioSrc = b64 ? URL.createObjectURL(base64ToBlob(b64, 'audio/mpeg')) : null;
+      const div = document.createElement('div');
+      div.className = 'preview-scene';
+      div.innerHTML = `
+        <div class="preview-scene-head">Scene ${sc.sceneNumber || i+1} <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">${sc.captionText||''}</span></div>
+        <div class="preview-media">
+          ${sc.pexelsVideoUrl ? `<video src="${sc.pexelsVideoUrl}" controls muted loop playsinline></video>` : `<div class="no-video-msg">🎞️ No video found for this scene</div>`}
+          <div class="audio-wrap">
+            <label style="font-size:11px;color:var(--text-muted)">🎙️ Voiceover</label>
+            ${audioSrc ? `<audio src="${audioSrc}" controls></audio>` : `<div style="font-size:12px;color:var(--text-muted);font-style:italic">No audio generated</div>`}
+            <div style="font-size:11px;color:var(--text-dim)">${sc.voiceoverText||''}</div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(div);
+    });
+    section.scrollIntoView({ behavior:'smooth', block:'start' });
+  },
+  renderVideoList(videos) {
+    const list = document.getElementById('video-list');
+    const keys = Object.keys(videos || {}).sort((a,b) => (videos[b].createdAt||0) - (videos[a].createdAt||0));
+    if (!keys.length) {
+      list.innerHTML = '<p class="sidebar-empty">No videos yet.<br/>Create your first short!</p>';
+      this.updateStorageBar(0);
+      return;
+    }
+    list.innerHTML = '';
+    keys.forEach(id => {
+      const v = videos[id];
+      const div = document.createElement('div');
+      div.className = 'video-item' + (State.currentVideoId === id ? ' active' : '');
+      div.id = `vi-${id}`;
+      div.innerHTML = `
+        <div class="vi-type">${CONTENT_TYPES.find(c=>c.id===v.type)?.label||v.type||''}</div>
+        <div class="vi-title">${v.title||'Untitled'}</div>
+        <div class="vi-date">${fmtDate(v.createdAt)} · ${v.length||0}s</div>
+      `;
+      div.onclick = () => window.App.loadSavedVideo(id);
+      list.appendChild(div);
+    });
+    this.updateStorageBar(keys.length);
+  },
+  updateStorageBar(count) {
+    const fill = document.getElementById('storage-fill');
+    const label = document.getElementById('storage-label');
+    const pct = Math.min((count / MAX_VIDEOS) * 100, 100);
+    fill.style.width = pct + '%';
+    fill.className = 'storage-fill' + (count >= MAX_VIDEOS ? ' danger' : count >= WARN_AT ? ' warn' : '');
+    label.textContent = `${count} / ${MAX_VIDEOS} videos`;
+  },
+  setGenButtons(generating) {
+    const approveBtn = document.getElementById('approve-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const dlBtn = document.getElementById('download-btn');
+    approveBtn.style.display = generating ? 'none' : '';
+    cancelBtn.style.display = generating ? '' : 'none';
+    dlBtn.disabled = generating;
+  },
+};
+
+// ═══════════════════════════════════════════
+// ELEVENLABS
+// ═══════════════════════════════════════════
+async function loadVoiceRegistry(apiKey) {
+  try {
+    const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': apiKey } });
+    if (!res.ok) throw new Error('ElevenLabs key invalid');
+    const data = await res.json();
+    const voices = data.voices || [];
+    const reg = { male: null, female: null, child: null };
+    voices.forEach(v => {
+      const labels = v.labels || {};
+      const gender = (labels.gender || '').toLowerCase();
+      const age = (labels.age || '').toLowerCase();
+      if (!reg.child && (age.includes('child') || age.includes('young'))) reg.child = v.voice_id;
+      if (!reg.female && gender === 'female') reg.female = v.voice_id;
+      if (!reg.male && gender === 'male') reg.male = v.voice_id;
+    });
+    reg.male = reg.male || FALLBACK_VOICE_ID;
+    reg.female = reg.female || reg.male;
+    reg.child = reg.child || reg.female || reg.male;
+    State.voiceRegistry = reg;
+    return true;
+  } catch(e) {
+    Toast.error('ElevenLabs: ' + e.message);
+    return false;
+  }
+}
+
+async function generateAudio(text, voiceTag, apiKey) {
+  const voiceId = State.voiceRegistry[voiceTag] || State.voiceRegistry.male || FALLBACK_VOICE_ID;
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      model_id: 'eleven_turbo_v2_5',
+      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail?.message || `HTTP ${res.status}`);
+  }
+  const buffer = await res.arrayBuffer();
+  return await arrayBufferToBase64(buffer);
+}
+
+// ═══════════════════════════════════════════
+// PEXELS
+// ═══════════════════════════════════════════
+async function fetchPexelsVideo(query, apiKey) {
+  const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=portrait&per_page=3`;
+  const res = await fetch(url, { headers: { Authorization: apiKey } });
+  if (!res.ok) throw new Error(`Pexels HTTP ${res.status}`);
+  const data = await res.json();
+  const videos = data.videos || [];
+  if (!videos.length) return null;
+  const v = videos[0];
+  const files = v.video_files || [];
+  const best = files.find(f => f.quality === 'hd') || files.find(f => f.quality === 'sd') || files[0];
+  return best?.link || null;
+}
+
+// ═══════════════════════════════════════════
+// GEMINI
+// ═══════════════════════════════════════════
+async function callGemini(prompt, apiKey) {
+  const res = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-gemini-key': apiKey },
+    body: JSON.stringify({
+      prompt,
+      generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.text || '';
+}
+
+// ═══════════════════════════════════════════
+// ZIP BUILDER (no libraries)
+// ═══════════════════════════════════════════
+function crc32(data) {
+  let crc = 0xFFFFFFFF;
+  const table = [];
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    table[i] = c;
+  }
+  for (let i = 0; i < data.length; i++) crc = table[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function buildZip(files) {
+  // files: [{name, data: Uint8Array}]
+  const encoder = new TextEncoder();
+  const centralDir = [];
+  const parts = [];
+  let offset = 0;
+
+  files.forEach(({ name, data }) => {
+    const nameBytes = encoder.encode(name);
+    const crc = crc32(data);
+    const size = data.length;
+    const header = new Uint8Array(30 + nameBytes.length);
+    const dv = new DataView(header.buffer);
+    dv.setUint32(0, 0x04034b50, true); // local file sig
+    dv.setUint16(4, 20, true);          // version needed
+    dv.setUint16(6, 0, true);           // flags
+    dv.setUint16(8, 0, true);           // compression (store)
+    dv.setUint16(10, 0, true);          // mod time
+    dv.setUint16(12, 0, true);          // mod date
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, size, true);
+    dv.setUint32(22, size, true);
+    dv.setUint16(26, nameBytes.length, true);
+    dv.setUint16(28, 0, true);
+    header.set(nameBytes, 30);
+
+    // central dir entry
+    const cd = new Uint8Array(46 + nameBytes.length);
+    const cdv = new DataView(cd.buffer);
+    cdv.setUint32(0, 0x02014b50, true); // central dir sig
+    cdv.setUint16(4, 20, true);
+    cdv.setUint16(6, 20, true);
+    cdv.setUint16(8, 0, true);
+    cdv.setUint16(10, 0, true);
+    cdv.setUint16(12, 0, true);
+    cdv.setUint16(14, 0, true);
+    cdv.setUint32(16, crc, true);
+    cdv.setUint32(20, size, true);
+    cdv.setUint32(24, size, true);
+    cdv.setUint16(28, nameBytes.length, true);
+    cdv.setUint16(30, 0, true);
+    cdv.setUint16(32, 0, true);
+    cdv.setUint16(34, 0, true);
+    cdv.setUint16(36, 0, true);
+    cdv.setUint32(38, 0, true);
+    cdv.setUint32(42, offset, true);
+    cd.set(nameBytes, 46);
+    centralDir.push(cd);
+
+    parts.push(header, data);
+    offset += header.length + size;
+  });
+
+  const cdBytes = centralDir.reduce((acc, cd) => acc + cd.length, 0);
+  const eocd = new Uint8Array(22);
+  const eodv = new DataView(eocd.buffer);
+  eodv.setUint32(0, 0x06054b50, true);
+  eodv.setUint16(4, 0, true);
+  eodv.setUint16(6, 0, true);
+  eodv.setUint16(8, files.length, true);
+  eodv.setUint16(10, files.length, true);
+  eodv.setUint32(12, cdBytes, true);
+  eodv.setUint32(16, offset, true);
+  eodv.setUint16(20, 0, true);
+
+  const allParts = [...parts, ...centralDir, eocd];
+  const total = allParts.reduce((a, p) => a + p.length, 0);
+  const result = new Uint8Array(total);
+  let pos = 0;
+  allParts.forEach(p => { result.set(p, pos); pos += p.length; });
+  return result;
+}
+
+// ═══════════════════════════════════════════
+// FIREBASE HELPERS
+// ═══════════════════════════════════════════
+async function fbLoadAllVideos() {
+  if (!db) return {};
+  try {
+    const snap = await db.ref('qc_videos').once('value');
+    return snap.val() || {};
+  } catch(e) {
+    console.error('Firebase load error', e);
+    return {};
+  }
+}
+
+async function fbSaveVideo(videoId, data) {
+  if (!db) return;
+  try {
+    await db.ref(`qc_videos/${videoId}`).set(data);
+  } catch(e) {
+    Toast.error('Firebase save failed: ' + e.message);
+  }
+}
+
+async function fbDeleteVideo(videoId) {
+  if (!db) return;
+  try {
+    await db.ref(`qc_videos/${videoId}`).remove();
+  } catch(e) {
+    console.error('Firebase delete error', e);
+  }
+}
+
+function deleteVideoLocally(videoId, scenes) {
+  scenes?.forEach((_, i) => lsRemove(getAudioKey(videoId, i)));
+}
+
+async function enforceVideoLimit() {
+  const keys = Object.keys(State.videos).sort((a,b) => (State.videos[a].createdAt||0) - (State.videos[b].createdAt||0));
+  if (keys.length < MAX_VIDEOS) return;
+  // delete oldest
+  const oldestId = keys[0];
+  const oldestV = State.videos[oldestId];
+  deleteVideoLocally(oldestId, oldestV?.scenes || []);
+  await fbDeleteVideo(oldestId);
+  delete State.videos[oldestId];
+  Toast.warn('Oldest video deleted to make room (20 video limit).');
+}
+
+// ═══════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════
+const App = {
+  async init() {
+    State.geminiKey = lsGet('qc_gemini_key') || '';
+    State.elevenKey = lsGet('qc_eleven_key') || '';
+    State.pexelsKey = lsGet('qc_pexels_key') || '';
+
+    if (!State.geminiKey || !State.elevenKey || !State.pexelsKey) {
+      document.getElementById('setup-overlay').classList.remove('hidden');
+      return;
+    }
+
+    await this._launch();
+  },
+
+  async _launch() {
+    document.getElementById('setup-overlay').classList.add('hidden');
+    // Load voice registry in background
+    if (State.elevenKey) loadVoiceRegistry(State.elevenKey);
+    // Load Firebase videos
+    State.videos = await fbLoadAllVideos();
+    UI.renderVideoList(State.videos);
+    UI.showWelcome();
+  },
+
+  async saveSetup() {
+    const g = document.getElementById('setup-gemini').value.trim();
+    const e = document.getElementById('setup-elevenlabs').value.trim();
+    const p = document.getElementById('setup-pexels').value.trim();
+    if (!g || !e || !p) { Toast.error('All three API keys are required.'); return; }
+    lsSet('qc_gemini_key', g);
+    lsSet('qc_eleven_key', e);
+    lsSet('qc_pexels_key', p);
+    State.geminiKey = g; State.elevenKey = e; State.pexelsKey = p;
+    Toast.success('Keys saved! Launching...');
+    await this._launch();
+  },
+
+  async saveSettings() {
+    const g = document.getElementById('s-gemini').value.trim();
+    const e = document.getElementById('s-elevenlabs').value.trim();
+    const p = document.getElementById('s-pexels').value.trim();
+    if (g && !g.startsWith('••')) { lsSet('qc_gemini_key', g); State.geminiKey = g; }
+    if (e && !e.startsWith('••')) {
+      lsSet('qc_eleven_key', e); State.elevenKey = e;
+      loadVoiceRegistry(e);
+    }
+    if (p && !p.startsWith('••')) { lsSet('qc_pexels_key', p); State.pexelsKey = p; }
+    Toast.success('Keys updated.');
+    UI.closeSettings();
+  },
+
+  async generateScript() {
+    if (!State.selectedType) { Toast.warn('Pick a content type first.'); return; }
+    const topic = document.getElementById('modal-topic').value.trim();
+    if (!topic) { Toast.warn('Enter a topic or niche.'); return; }
+    if (!State.geminiKey) { Toast.error('No Gemini key set.'); return; }
+
+    const btn = document.getElementById('gen-script-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating...';
+
+    const typeLabel = CONTENT_TYPES.find(c => c.id === State.selectedType)?.label || State.selectedType;
+    const prompt = `${GEMINI_SYSTEM}\n\nContent type: ${typeLabel}\nTopic: ${topic}\nTarget video length: ${State.selectedLength} seconds\n\nGenerate the script JSON now.`;
+
+    try {
+      const raw = await callGemini(prompt, State.geminiKey);
+      // Strip potential markdown fences
+      const cleaned = raw.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (!parsed.scenes || !Array.isArray(parsed.scenes)) throw new Error('Invalid script structure');
+
+      State.scriptData = parsed;
+      State.currentVideoId = uid();
+      State.currentScenes = parsed.scenes.map((sc, i) => ({
+        ...sc,
+        sceneNumber: i + 1,
+        status: 'pending',
+        statusLabel: 'Pending',
+        pexelsVideoUrl: null,
+      }));
+
+      UI.closeNewModal();
+      UI.showWorkspace(parsed.title);
+      UI.renderSceneCards(State.currentScenes, true);
+      document.getElementById('approve-btn').style.display = '';
+      document.getElementById('cancel-btn').style.display = 'none';
+      document.getElementById('download-btn').disabled = true;
+      document.getElementById('gen-status').textContent = '';
+      document.getElementById('preview-section').style.display = 'none';
+
+    } catch(e) {
+      Toast.error('Script error: ' + e.message + '. Try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generate Script →';
+    }
+  },
+
+  async startGeneration() {
+    if (State.isGenerating) return;
+    if (!State.currentScenes.length) { Toast.warn('No scenes to generate.'); return; }
+    if (!State.elevenKey) { Toast.error('No ElevenLabs key.'); return; }
+    if (!State.pexelsKey) { Toast.error('No Pexels key.'); return; }
+
+    // Sync edits from DOM
+    State.currentScenes.forEach((sc, i) => {
+      const cap = document.getElementById(`sc-caption-${i}`);
+      const vo = document.getElementById(`sc-voiceover-${i}`);
+      if (cap) sc.captionText = cap.innerText.trim();
+      if (vo) sc.voiceoverText = vo.innerText.trim();
+    });
+
+    // Check storage limit
+    const count = Object.keys(State.videos).length;
+    if (count >= WARN_AT) {
+      if (count >= MAX_VIDEOS) {
+        await enforceVideoLimit();
+      } else {
+        Toast.warn(`You have ${count} saved videos. Limit is ${MAX_VIDEOS}.`);
+      }
+    }
+
+    State.isGenerating = true;
+    State.cancelRequested = false;
+    UI.setGenButtons(true);
+    document.getElementById('gen-status').textContent = 'Starting generation...';
+
+    // Re-render cards as non-editable
+    UI.renderSceneCards(State.currentScenes, false);
+
+    for (let i = 0; i < State.currentScenes.length; i++) {
+      if (State.cancelRequested) {
+        State.currentScenes[i].status = 'cancelled';
+        State.currentScenes[i].statusLabel = 'Cancelled';
+        UI.updateSceneStatus(i, 'cancelled', 'Cancelled');
+        continue;
+      }
+
+      const sc = State.currentScenes[i];
+
+      // Step 1: Pexels
+      UI.updateSceneStatus(i, 'generating', 'Fetching video…');
+      sc.status = 'generating';
+      document.getElementById('gen-status').textContent = `Scene ${i+1} of ${State.currentScenes.length}: Fetching Pexels video…`;
+
+      try {
+        const videoUrl = await fetchPexelsVideo(sc.pexelsSearchTerm, State.pexelsKey);
+        sc.pexelsVideoUrl = videoUrl;
+        if (!videoUrl) UI.updateSceneStatus(i, 'generating', '🎬 No video found, continuing…');
+      } catch(e) {
+        sc.pexelsVideoUrl = null;
+        console.warn('Pexels error scene', i, e.message);
+      }
+
+      if (State.cancelRequested) {
+        sc.status = 'cancelled'; sc.statusLabel = 'Cancelled';
+        UI.updateSceneStatus(i, 'cancelled', 'Cancelled');
+        continue;
+      }
+
+      // Step 2: ElevenLabs audio
+      UI.updateSceneStatus(i, 'generating', '🎙️ Generating audio…');
+      document.getElementById('gen-status').textContent = `Scene ${i+1} of ${State.currentScenes.length}: Generating voiceover…`;
+
+      try {
+        const b64 = await generateAudio(sc.voiceoverText, sc.voiceTag, State.elevenKey);
+        lsSet(getAudioKey(State.currentVideoId, i), b64);
+        sc.status = 'ready';
+        sc.statusLabel = 'Ready';
+        UI.updateSceneStatus(i, 'ready', 'Ready');
+      } catch(e) {
+        sc.status = 'failed';
+        sc.statusLabel = 'Failed: ' + e.message;
+        UI.updateSceneStatus(i, 'failed', '❌ ' + e.message);
+        // Re-render retry button
+        const badgesEl = document.querySelector(`#scene-card-${i} .sc-badges`);
+        if (badgesEl) {
+          const retryBtn = document.createElement('button');
+          retryBtn.className = 'badge-retry';
+          retryBtn.textContent = '↺ Retry';
+          retryBtn.onclick = () => window.App.retryScene(i);
+          badgesEl.appendChild(retryBtn);
+        }
+      }
+
+      // Delay between scenes (except last)
+      if (i < State.currentScenes.length - 1 && !State.cancelRequested) {
+        UI.showCountdown(i, ELEVENLABS_DELAY_MS / 1000);
+        const nextIdx = i + 1;
+        for (let s = ELEVENLABS_DELAY_MS / 1000; s > 0; s--) {
+          if (State.cancelRequested) break;
+          UI.showCountdown(i, s);
+          // Show countdown on next scene
+          const nextCountdown = document.getElementById(`sc-countdown-${nextIdx}`);
+          if (nextCountdown) { nextCountdown.style.display = 'block'; nextCountdown.textContent = `⏱ Starting in ${s}s...`; }
+          await sleep(1000);
+        }
+        UI.showCountdown(i, 0);
+        const nextC = document.getElementById(`sc-countdown-${nextIdx}`);
+        if (nextC) nextC.style.display = 'none';
+      }
+    }
+
+    State.isGenerating = false;
+    UI.setGenButtons(false);
+
+    const readyCount = State.currentScenes.filter(s => s.status === 'ready').length;
+    const failCount = State.currentScenes.filter(s => s.status === 'failed').length;
+    const cancelCount = State.currentScenes.filter(s => s.status === 'cancelled').length;
+
+    document.getElementById('gen-status').textContent =
+      `✅ ${readyCount} ready${failCount ? ` · ❌ ${failCount} failed` : ''}${cancelCount ? ` · 🚫 ${cancelCount} cancelled` : ''}`;
+    document.getElementById('download-btn').disabled = false;
+
+    // Save to Firebase (completed)
+    if (!State.cancelRequested && State.scriptData) {
+      await this._saveToFirebase();
+    }
+
+    // Show preview
+    UI.renderPreview(State.currentVideoId, State.currentScenes);
+    Toast.success(`Generation complete! ${readyCount} scenes ready.`);
+  },
+
+  cancelGeneration() {
+    State.cancelRequested = true;
+    Toast.warn('Cancelling after current scene…');
+  },
+
+  async retryScene(i) {
+    if (State.isGenerating) { Toast.warn('Generation in progress.'); return; }
+    const sc = State.currentScenes[i];
+    if (!sc) return;
+
+    UI.updateSceneStatus(i, 'generating', '🎙️ Retrying audio…');
+    try {
+      const b64 = await generateAudio(sc.voiceoverText, sc.voiceTag, State.elevenKey);
+      lsSet(getAudioKey(State.currentVideoId, i), b64);
+      sc.status = 'ready'; sc.statusLabel = 'Ready';
+      UI.updateSceneStatus(i, 'ready', 'Ready');
+      // Remove retry button
+      const retryBtn = document.querySelector(`#scene-card-${i} .badge-retry`);
+      if (retryBtn) retryBtn.remove();
+      Toast.success(`Scene ${i+1} audio regenerated.`);
+    } catch(e) {
+      sc.status = 'failed'; sc.statusLabel = 'Failed: ' + e.message;
+      UI.updateSceneStatus(i, 'failed', '❌ ' + e.message);
+      Toast.error(`Scene ${i+1} retry failed: ` + e.message);
+    }
+  },
+
+  async _saveToFirebase() {
+    if (!State.scriptData || !State.currentVideoId) return;
+    const typeLabel = CONTENT_TYPES.find(c => c.id === State.selectedType)?.label || State.selectedType;
+    const videoData = {
+      title: State.scriptData.title,
+      type: State.selectedType,
+      niche: document.getElementById('modal-topic')?.value?.trim() || '',
+      length: State.selectedLength,
+      createdAt: Date.now(),
+      completed: true,
+      scenes: State.currentScenes.map(sc => ({
+        sceneNumber: sc.sceneNumber,
+        captionText: sc.captionText,
+        voiceoverText: sc.voiceoverText,
+        pexelsSearchTerm: sc.pexelsSearchTerm,
+        pexelsVideoUrl: sc.pexelsVideoUrl || null,
+        voiceTag: sc.voiceTag,
+        status: sc.status,
+      })),
+    };
+    await fbSaveVideo(State.currentVideoId, videoData);
+    State.videos[State.currentVideoId] = videoData;
+    UI.renderVideoList(State.videos);
+    // Highlight active
+    document.querySelectorAll('.video-item').forEach(el => el.classList.remove('active'));
+    const vi = document.getElementById(`vi-${State.currentVideoId}`);
+    if (vi) vi.classList.add('active');
+  },
+
+  async loadSavedVideo(videoId) {
+    const v = State.videos[videoId];
+    if (!v) return;
+    State.currentVideoId = videoId;
+    State.currentScenes = (v.scenes || []).map(sc => ({ ...sc }));
+    State.selectedType = v.type;
+    State.selectedLength = v.length;
+    State.scriptData = { title: v.title, scenes: v.scenes };
+
+    UI.showWorkspace(v.title);
+    UI.renderSceneCards(State.currentScenes, false);
+    document.getElementById('approve-btn').style.display = 'none';
+    document.getElementById('cancel-btn').style.display = 'none';
+    document.getElementById('download-btn').disabled = false;
+    document.getElementById('gen-status').textContent = 'Loaded from history.';
+    UI.renderPreview(videoId, State.currentScenes);
+
+    // Update sidebar highlight
+    document.querySelectorAll('.video-item').forEach(el => el.classList.remove('active'));
+    const vi = document.getElementById(`vi-${videoId}`);
+    if (vi) { vi.classList.add('active'); }
+    UI.closeSidebar();
+  },
+
+  async downloadZip() {
+    if (!State.currentScenes.length || !State.currentVideoId) return;
+    const btn = document.getElementById('download-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Building ZIP…';
+
+    try {
+      const encoder = new TextEncoder();
+      const zipFiles = [];
+
+      // Audio files
+      for (let i = 0; i < State.currentScenes.length; i++) {
+        const sc = State.currentScenes[i];
+        const b64 = lsGet(getAudioKey(State.currentVideoId, i));
+        if (b64) {
+          const bytes = atob(b64);
+          const arr = new Uint8Array(bytes.length);
+          for (let j = 0; j < bytes.length; j++) arr[j] = bytes.charCodeAt(j);
+          const name = `Scene_${String(i+1).padStart(2,'0')}_voiceover.mp3`;
+          zipFiles.push({ name, data: arr });
+        }
+      }
+
+      // video_links.txt
+      const linksLines = State.currentScenes.map((sc, i) =>
+        `Scene ${i+1}: ${sc.pexelsVideoUrl || 'No video found'}`
+      ).join('\n');
+      zipFiles.push({ name: 'video_links.txt', data: encoder.encode(linksLines) });
+
+      // script.txt
+      const scriptLines = State.currentScenes.map((sc, i) =>
+        `--- Scene ${i+1} ---\nCaption: ${sc.captionText}\nVoiceover: ${sc.voiceoverText}\nPexels Search: ${sc.pexelsSearchTerm}\n`
+      ).join('\n');
+      zipFiles.push({ name: 'script.txt', data: encoder.encode(scriptLines) });
+
+      const zipData = buildZip(zipFiles);
+      const blob = new Blob([zipData], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date().toISOString().split('T')[0];
+      const safeTitle = sanitizeForZipName(State.scriptData?.title || 'video');
+      a.href = url;
+      a.download = `QuickClips_${safeTitle}_${today}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      Toast.success('ZIP downloaded!');
+    } catch(e) {
+      Toast.error('ZIP error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⬇ Download ZIP';
+    }
+  },
+};
+
+// ═══════════════════════════════════════════
+// EXPOSE TO WINDOW
+// ═══════════════════════════════════════════
+window.App = App;
+window.UI = UI;
+window.Toast = Toast;
+
+// ═══════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  App.init();
+});
+</script>
+</body>
+</html>
