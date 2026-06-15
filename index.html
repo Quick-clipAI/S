@@ -222,10 +222,11 @@ input,textarea{font-family:'Inter',sans-serif;outline:none}
 <div id="setup-overlay">
   <div class="setup-box">
     <div class="setup-logo">⚡ QuickClips AI</div>
-    <p class="setup-sub">Enter your API keys to get started. These are saved locally on your device.</p>
+    <p class="setup-sub">Enter your API keys to get started. Pexels is optional — the app works without it, videos just won't have backgrounds.</p>
     <div class="field"><label>Gemini API Key</label><input type="password" id="setup-gemini" placeholder="AIza..."/></div>
     <div class="field"><label>ElevenLabs API Key</label><input type="password" id="setup-elevenlabs" placeholder="sk_..."/></div>
-    <div class="field"><label>Pexels API Key</label><input type="password" id="setup-pexels" placeholder="Your Pexels key..."/></div>
+    <div class="field"><label>Pexels API Key <span style="font-weight:400;color:var(--text-muted)">(optional — free at pexels.com/api)</span></label><input type="password" id="setup-pexels" placeholder="Optional — leave blank to skip video backgrounds"/></div>
+    <div class="field"><label>Pixabay API Key <span style="font-weight:400;color:var(--text-muted)">(optional — free at pixabay.com/api/docs)</span></label><input type="password" id="setup-pixabay" placeholder="Optional — used if Pexels fails or is empty"/></div>
     <button class="btn-primary" onclick="window.App.saveSetup()">Save & Launch</button>
   </div>
 </div>
@@ -263,6 +264,7 @@ input,textarea{font-family:'Inter',sans-serif;outline:none}
     <div class="field"><label>Gemini API Key</label><input type="password" id="s-gemini" placeholder="AIza..."/></div>
     <div class="field"><label>ElevenLabs API Key</label><input type="password" id="s-elevenlabs" placeholder="sk_..."/></div>
     <div class="field"><label>Pexels API Key</label><input type="password" id="s-pexels" placeholder="Your Pexels key..."/></div>
+    <div class="field"><label>Pixabay API Key <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label><input type="password" id="s-pixabay" placeholder="Your Pixabay key..."/></div>
     <div class="modal-actions" style="margin-top:8px">
       <button class="btn-action btn-outline" onclick="window.UI.closeSettings()">Close</button>
       <button class="btn-action btn-approve" onclick="window.App.saveSettings()">Save Keys</button>
@@ -422,6 +424,7 @@ const State = {
   geminiKey: '',
   elevenKey: '',
   pexelsKey: '',
+  pixabayKey: '',
   voiceRegistry: { male: FALLBACK_VOICE_ID, female: FALLBACK_VOICE_ID, child: FALLBACK_VOICE_ID },
   videos: {},           // Firebase loaded videos
   currentVideoId: null,
@@ -543,6 +546,7 @@ const UI = {
     document.getElementById('s-gemini').value = State.geminiKey ? '••••••••' : '';
     document.getElementById('s-elevenlabs').value = State.elevenKey ? '••••••••' : '';
     document.getElementById('s-pexels').value = State.pexelsKey ? '••••••••' : '';
+    document.getElementById('s-pixabay').value = State.pixabayKey ? '••••••••' : '';
     document.getElementById('settings-modal').classList.remove('hidden');
   },
   closeSettings() {
@@ -753,6 +757,38 @@ async function fetchPexelsVideo(query, apiKey) {
   return best?.link || null;
 }
 
+async function fetchPixabayVideo(query, apiKey) {
+  const url = `https://pixabay.com/api/videos/?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&video_type=all&per_page=3`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Pixabay HTTP ${res.status}`);
+  const data = await res.json();
+  const hits = data.hits || [];
+  if (!hits.length) return null;
+  const v = hits[0];
+  // Pick smallest usable size (portrait-ish)
+  const sizes = v.videos || {};
+  const vid = sizes.small || sizes.medium || sizes.large || sizes.tiny;
+  return vid?.url || null;
+}
+
+async function fetchVideoClip(query) {
+  // Try Pexels first if key exists
+  if (State.pexelsKey) {
+    try {
+      const url = await fetchPexelsVideo(query, State.pexelsKey);
+      if (url) return url;
+    } catch(e) { /* fall through to Pixabay */ }
+  }
+  // Try Pixabay if key exists
+  if (State.pixabayKey) {
+    try {
+      const url = await fetchPixabayVideo(query, State.pixabayKey);
+      if (url) return url;
+    } catch(e) { /* no video */ }
+  }
+  return null;
+}
+
 // ═══════════════════════════════════════════
 // GEMINI
 // ═══════════════════════════════════════════
@@ -917,6 +953,7 @@ const App = {
     State.geminiKey = lsGet('qc_gemini_key') || '';
     State.elevenKey = lsGet('qc_eleven_key') || '';
     State.pexelsKey = lsGet('qc_pexels_key') || '';
+    State.pixabayKey = lsGet('qc_pixabay_key') || '';
 
     if (!State.geminiKey || !State.elevenKey || !State.pexelsKey) {
       document.getElementById('setup-overlay').classList.remove('hidden');
@@ -940,11 +977,13 @@ const App = {
     const g = document.getElementById('setup-gemini').value.trim();
     const e = document.getElementById('setup-elevenlabs').value.trim();
     const p = document.getElementById('setup-pexels').value.trim();
-    if (!g || !e || !p) { Toast.error('All three API keys are required.'); return; }
+    const pb = document.getElementById('setup-pixabay').value.trim();
+    if (!g || !e) { Toast.error('Gemini and ElevenLabs keys are required.'); return; }
     lsSet('qc_gemini_key', g);
     lsSet('qc_eleven_key', e);
     lsSet('qc_pexels_key', p);
-    State.geminiKey = g; State.elevenKey = e; State.pexelsKey = p;
+    if (pb) lsSet('qc_pixabay_key', pb);
+    State.geminiKey = g; State.elevenKey = e; State.pexelsKey = p; State.pixabayKey = pb;
     Toast.success('Keys saved! Launching...');
     await this._launch();
   },
@@ -958,6 +997,8 @@ const App = {
       lsSet('qc_eleven_key', e); State.elevenKey = e;
       loadVoiceRegistry(e);
     }
+    const pb3 = document.getElementById('s-pixabay')?.value.trim();
+    if (pb3 && !pb3.startsWith('••')) { lsSet('qc_pixabay_key', pb3); State.pixabayKey = pb3; }
     if (p && !p.startsWith('••')) { lsSet('qc_pexels_key', p); State.pexelsKey = p; }
     Toast.success('Keys updated.');
     UI.closeSettings();
@@ -1014,7 +1055,7 @@ const App = {
     if (State.isGenerating) return;
     if (!State.currentScenes.length) { Toast.warn('No scenes to generate.'); return; }
     if (!State.elevenKey) { Toast.error('No ElevenLabs key.'); return; }
-    if (!State.pexelsKey) { Toast.error('No Pexels key.'); return; }
+    if (!State.pexelsKey && !State.pixabayKey) { Toast.warn('No video key set — scenes will generate without background video.'); }
 
     // Sync edits from DOM
     State.currentScenes.forEach((sc, i) => {
@@ -1058,7 +1099,7 @@ const App = {
       document.getElementById('gen-status').textContent = `Scene ${i+1} of ${State.currentScenes.length}: Fetching Pexels video…`;
 
       try {
-        const videoUrl = await fetchPexelsVideo(sc.pexelsSearchTerm, State.pexelsKey);
+        const videoUrl = await fetchVideoClip(sc.pexelsSearchTerm);
         sc.pexelsVideoUrl = videoUrl;
         if (!videoUrl) UI.updateSceneStatus(i, 'generating', '🎬 No video found, continuing…');
       } catch(e) {
