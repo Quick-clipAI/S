@@ -263,6 +263,10 @@ input,textarea{font-family:'Inter',sans-serif;outline:none}
     <div class="field"><label>Pexels API Key <span style="font-weight:400;color:var(--text-muted)">(optional — free at pexels.com/api)</span></label><input type="password" id="setup-pexels" placeholder="Optional — leave blank to skip video backgrounds"/></div>
     <div class="field"><label>Pixabay API Key <span style="font-weight:400;color:var(--text-muted)">(optional — free at pixabay.com/api/docs)</span></label><input type="password" id="setup-pixabay" placeholder="Optional — used if Pexels fails or is empty"/></div>
     <button class="btn-primary" onclick="window.App.saveSetup()">Save & Launch</button>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;text-align:center">
+      <p style="color:var(--text-muted);font-size:12px;margin-bottom:8px">Already set up on another device?</p>
+      <button class="btn-action btn-outline" style="width:100%;font-size:12px" onclick="window.KeySync.open()">🔐 Restore Keys from Sync Code / QR</button>
+    </div>
   </div>
 </div>
 
@@ -338,6 +342,74 @@ input,textarea{font-family:'Inter',sans-serif;outline:none}
     <div class="modal-actions" style="margin-top:8px">
       <button class="btn-action btn-outline" onclick="window.UI.closeSettings()">Close</button>
       <button class="btn-action btn-approve" onclick="window.App.saveSettings()">Save Keys</button>
+    </div>
+    <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+      <button class="btn-action btn-outline" style="width:100%;font-size:12px" onclick="window.UI.closeSettings();window.KeySync.open()">🔐 Sync Keys to Another Device</button>
+    </div>
+  </div>
+</div>
+<div id="keysync-modal" class="modal-backdrop hidden">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-title">🔐 Key Sync</div>
+    <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px;line-height:1.5">Export your keys as an encrypted QR code or text code — no server, zero exposure.</p>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <button id="tab-export-btn" onclick="KeySync.showTab('export')" style="flex:1;font-size:12px;padding:8px;border-radius:8px;border:1px solid var(--purple);background:var(--purple);color:#fff;cursor:pointer;font-weight:600">📤 Export</button>
+      <button id="tab-import-btn" onclick="KeySync.showTab('import')" style="flex:1;font-size:12px;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer">📥 Import</button>
+    </div>
+
+    <!-- EXPORT -->
+    <div id="keysync-export">
+      <div class="field"><label>Set a PIN <span style="font-weight:400;color:var(--text-muted)">(4–12 chars — remember it!)</span></label>
+        <input type="password" id="ks-export-pin" placeholder="e.g. mypin99" maxlength="12" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box"/></div>
+      <button class="btn-action btn-approve" style="width:100%;margin-bottom:14px" onclick="KeySync.exportKeys()">Generate QR & Code</button>
+      <div id="ks-export-result" style="display:none">
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button id="ks-qr-tab-btn" onclick="KeySync.showExportTab('qr')" style="flex:1;font-size:11px;padding:6px;border-radius:8px;border:1px solid var(--purple);background:var(--purple);color:#fff;cursor:pointer;font-weight:600">📷 QR Code</button>
+          <button id="ks-txt-tab-btn" onclick="KeySync.showExportTab('text')" style="flex:1;font-size:11px;padding:6px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer">🔤 Text Code</button>
+        </div>
+        <div id="ks-qr-panel" style="text-align:center">
+          <div id="ks-qr-canvas" style="display:inline-block;background:#fff;padding:12px;border-radius:12px;margin-bottom:8px"></div>
+          <p style="color:var(--text-muted);font-size:11px">Scan this with your phone to instantly restore all keys.</p>
+        </div>
+        <div id="ks-text-panel" style="display:none">
+          <div style="position:relative">
+            <textarea id="ks-code-output" readonly style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;padding-right:60px;color:var(--text);font-size:10px;font-family:monospace;resize:none;height:80px"></textarea>
+            <button onclick="KeySync.copyCode()" style="position:absolute;top:6px;right:6px;background:var(--purple);border:none;border-radius:6px;color:#fff;font-size:11px;padding:4px 10px;cursor:pointer">Copy</button>
+          </div>
+          <p style="color:var(--text-muted);font-size:11px;margin-top:6px">Copy + save this code. Enter it + your PIN on any other device.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPORT -->
+    <div id="keysync-import" style="display:none">
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button id="ks-scan-tab-btn" onclick="KeySync.showImportTab('scan')" style="flex:1;font-size:11px;padding:6px;border-radius:8px;border:1px solid var(--purple);background:var(--purple);color:#fff;cursor:pointer;font-weight:600">📷 Scan QR</button>
+        <button id="ks-paste-tab-btn" onclick="KeySync.showImportTab('paste')" style="flex:1;font-size:11px;padding:6px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer">🔤 Paste Code</button>
+      </div>
+      <div id="ks-scan-panel">
+        <div style="position:relative;background:#000;border-radius:12px;overflow:hidden;margin-bottom:10px;aspect-ratio:1">
+          <video id="ks-video" style="width:100%;height:100%;object-fit:cover" playsinline></video>
+          <canvas id="ks-scan-canvas" style="display:none"></canvas>
+          <div style="position:absolute;inset:0;border:3px solid var(--purple);border-radius:12px;pointer-events:none"></div>
+          <div style="position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#fff;font-size:11px;text-shadow:0 1px 4px #000">Point camera at QR on your PC</div>
+        </div>
+        <button id="ks-cam-btn" class="btn-action btn-approve" style="width:100%;margin-bottom:8px" onclick="KeySync.startCamera()">Start Camera</button>
+        <div id="ks-scan-status" style="color:var(--text-muted);font-size:11px;text-align:center;display:none">Scanning…</div>
+      </div>
+      <div id="ks-paste-panel" style="display:none">
+        <div class="field"><label>Paste Sync Code</label>
+          <textarea id="ks-import-code" placeholder="Paste QCSK-... code here" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:11px;font-family:monospace;resize:none;height:70px"></textarea>
+        </div>
+      </div>
+      <div class="field" style="margin-top:8px"><label>PIN</label>
+        <input type="password" id="ks-import-pin" placeholder="PIN you set on export" maxlength="12" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;width:100%;box-sizing:border-box"/></div>
+      <button class="btn-action btn-approve" style="width:100%;margin-bottom:8px" onclick="KeySync.importKeys()">Restore Keys</button>
+      <div id="ks-import-result" style="display:none;color:#4ade80;font-size:13px;text-align:center;padding:8px">✅ Keys restored! Reload to continue.</div>
+    </div>
+
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+      <button class="btn-action btn-outline" style="width:100%" onclick="KeySync.close()">Close</button>
     </div>
   </div>
 </div>
@@ -421,6 +493,8 @@ input,textarea{font-family:'Inter',sans-serif;outline:none}
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 
 <script type="module">
 // ═══════════════════════════════════════════
@@ -663,6 +737,7 @@ const State = {
   elevenKey: '',
   pexelsKey: '',
   pixabayKey: '',
+  scriptMode: 'ai',     // 'ai' | 'manual'
   voiceRegistry: { male: FALLBACK_VOICE_ID, female: FALLBACK_VOICE_ID, child: FALLBACK_VOICE_ID },
   videos: {},           // Firebase loaded videos
   currentVideoId: null,
@@ -789,6 +864,24 @@ const UI = {
   },
   closeSettings() {
     document.getElementById('settings-modal').classList.add('hidden');
+  },
+  switchMode(mode) {
+    State.scriptMode = mode;
+    const aiBtn     = document.getElementById('mode-ai-btn');
+    const manualBtn = document.getElementById('mode-manual-btn');
+    const aiArea    = document.getElementById('ai-script-area');
+    const manualArea= document.getElementById('manual-script-area');
+    if (mode === 'manual') {
+      aiBtn.classList.remove('active');
+      manualBtn.classList.add('active');
+      aiArea.style.display    = 'none';
+      manualArea.style.display= 'block';
+    } else {
+      aiBtn.classList.add('active');
+      manualBtn.classList.remove('active');
+      aiArea.style.display    = 'block';
+      manualArea.style.display= 'none';
+    }
   },
   openSidebar() {
     document.getElementById('sidebar').classList.add('open');
@@ -1010,19 +1103,19 @@ async function fetchPixabayVideo(query, apiKey) {
 }
 
 async function fetchVideoClip(query) {
-  // Try Pexels first if key exists
-  if (State.pexelsKey) {
+  // Only call Pexels if key is real (not empty, not a placeholder '...')
+  if (State.pexelsKey && !State.pexelsKey.includes('...')) {
     try {
       const url = await fetchPexelsVideo(query, State.pexelsKey);
       if (url) return url;
-    } catch(e) { /* fall through to Pixabay */ }
+    } catch(e) { console.warn('Pexels failed, trying Pixabay…', e.message); }
   }
-  // Try Pixabay if key exists
-  if (State.pixabayKey) {
+  // Fallback: Pixabay
+  if (State.pixabayKey && !State.pixabayKey.includes('...')) {
     try {
       const url = await fetchPixabayVideo(query, State.pixabayKey);
       if (url) return url;
-    } catch(e) { /* no video */ }
+    } catch(e) { console.warn('Pixabay failed:', e.message); }
   }
   return null;
 }
@@ -1193,7 +1286,8 @@ const App = {
     State.pexelsKey = lsGet('qc_pexels_key') || '';
     State.pixabayKey = lsGet('qc_pixabay_key') || '';
 
-    if (!State.geminiKey || !State.elevenKey || !State.pexelsKey) {
+    // Only Gemini + ElevenLabs are required; video keys are optional
+    if (!State.geminiKey || !State.elevenKey) {
       document.getElementById('setup-overlay').classList.remove('hidden');
       return;
     }
@@ -1219,9 +1313,10 @@ const App = {
     if (!g || !e) { Toast.error('Gemini and ElevenLabs keys are required.'); return; }
     lsSet('qc_gemini_key', g);
     lsSet('qc_eleven_key', e);
-    lsSet('qc_pexels_key', p);
+    if (p)  lsSet('qc_pexels_key',  p);
     if (pb) lsSet('qc_pixabay_key', pb);
-    State.geminiKey = g; State.elevenKey = e; State.pexelsKey = p; State.pixabayKey = pb;
+    State.geminiKey = g; State.elevenKey = e;
+    State.pexelsKey = p || ''; State.pixabayKey = pb || '';
     Toast.success('Keys saved! Launching...');
     await this._launch();
   },
@@ -1685,6 +1780,158 @@ BG.init();
 window.App = App;
 window.UI = UI;
 window.Toast = Toast;
+
+// ═══════════════════════════════════════════
+// KEY SYNC — AES-256-GCM + PIN, QR + text
+// ═══════════════════════════════════════════
+const KeySync = (() => {
+  const PREFIX = 'QCSK-';
+  let _scanInterval = null, _stream = null, _lastCode = null;
+
+  async function deriveKey(pin, salt) {
+    const enc = new TextEncoder();
+    const km = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' },
+      km, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+    );
+  }
+  const b64u  = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const db64u = s   => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+
+  async function encrypt(plain, pin) {
+    const enc = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+    const key  = await deriveKey(pin, salt);
+    const ct   = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc.encode(plain));
+    return PREFIX + b64u(salt) + '.' + b64u(iv) + '.' + b64u(ct);
+  }
+  async function decrypt(code, pin) {
+    if (!code.startsWith(PREFIX)) throw new Error('Invalid code');
+    const [salt,iv,ct] = code.slice(PREFIX.length).split('.').map(db64u);
+    const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, await deriveKey(pin,salt), ct);
+    return new TextDecoder().decode(plain);
+  }
+  function buildQR(text) {
+    const el = document.getElementById('ks-qr-canvas');
+    el.innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(el, { text, width:220, height:220, colorDark:'#000', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M });
+    } else {
+      el.innerHTML = '<p style="color:#f87171;font-size:12px">QR library not loaded. Use text code instead.</p>';
+    }
+  }
+  async function startScan() {
+    const video=document.getElementById('ks-video'), canvas=document.getElementById('ks-scan-canvas');
+    const status=document.getElementById('ks-scan-status'), btn=document.getElementById('ks-cam-btn');
+    try {
+      _stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+      video.srcObject = _stream; await video.play();
+      btn.textContent = 'Stop Camera'; btn.onclick = () => KeySync.stopCamera();
+      status.style.display = '';
+      const ctx = canvas.getContext('2d');
+      _scanInterval = setInterval(() => {
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        const d = ctx.getImageData(0,0,canvas.width,canvas.height);
+        if (typeof jsQR === 'undefined') return;
+        const r = jsQR(d.data,d.width,d.height,{inversionAttempts:'dontInvert'});
+        if (r && r.data && r.data.startsWith(PREFIX) && r.data !== _lastCode) {
+          _lastCode = r.data;
+          KeySync.stopCamera();
+          status.textContent = '✅ QR scanned! Enter PIN and tap Restore.';
+          status.style.color = '#4ade80'; status.style.display = '';
+          Toast.success('QR scanned! Enter your PIN below.');
+        }
+      }, 200);
+    } catch(e) { Toast.error('Camera access denied or not available.'); }
+  }
+  function stopScan() {
+    if (_scanInterval) { clearInterval(_scanInterval); _scanInterval = null; }
+    if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+    const v = document.getElementById('ks-video'); if (v) v.srcObject = null;
+    const btn = document.getElementById('ks-cam-btn');
+    if (btn) { btn.textContent = 'Start Camera'; btn.onclick = () => KeySync.startCamera(); }
+  }
+
+  function setTabStyle(btnId, active) {
+    const b = document.getElementById(btnId);
+    if (!b) return;
+    b.style.background   = active ? 'var(--purple)' : 'transparent';
+    b.style.color        = active ? '#fff' : 'var(--text-muted)';
+    b.style.border       = `1px solid ${active ? 'var(--purple)' : 'var(--border)'}`;
+    b.style.fontWeight   = active ? '600' : '400';
+  }
+
+  return {
+    open() {
+      _lastCode = null;
+      ['ks-export-pin','ks-import-pin'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+      const ic=document.getElementById('ks-import-code');if(ic)ic.value='';
+      document.getElementById('ks-export-result').style.display='none';
+      document.getElementById('ks-import-result').style.display='none';
+      const ss=document.getElementById('ks-scan-status');if(ss){ss.style.display='none';ss.style.color='var(--text-muted)';ss.textContent='Scanning…';}
+      this.showTab('export'); this.showExportTab('qr'); this.showImportTab('scan');
+      document.getElementById('keysync-modal').classList.remove('hidden');
+    },
+    close() { stopScan(); document.getElementById('keysync-modal').classList.add('hidden'); },
+    showTab(tab) {
+      document.getElementById('keysync-export').style.display = tab==='export' ? '' : 'none';
+      document.getElementById('keysync-import').style.display = tab==='import' ? '' : 'none';
+      setTabStyle('tab-export-btn', tab==='export'); setTabStyle('tab-import-btn', tab==='import');
+      if (tab==='export') stopScan();
+    },
+    showExportTab(t) {
+      document.getElementById('ks-qr-panel').style.display  = t==='qr'   ? '' : 'none';
+      document.getElementById('ks-text-panel').style.display = t==='text' ? '' : 'none';
+      setTabStyle('ks-qr-tab-btn', t==='qr'); setTabStyle('ks-txt-tab-btn', t==='text');
+    },
+    showImportTab(t) {
+      document.getElementById('ks-scan-panel').style.display  = t==='scan'  ? '' : 'none';
+      document.getElementById('ks-paste-panel').style.display = t==='paste' ? '' : 'none';
+      setTabStyle('ks-scan-tab-btn', t==='scan'); setTabStyle('ks-paste-tab-btn', t==='paste');
+      if (t!=='scan') stopScan();
+    },
+    async exportKeys() {
+      const pin = document.getElementById('ks-export-pin').value.trim();
+      if (pin.length < 4) { Toast.error('PIN must be at least 4 characters.'); return; }
+      const keys = { g:lsGet('qc_gemini_key')||'', e:lsGet('qc_eleven_key')||'', p:lsGet('qc_pexels_key')||'', pb:lsGet('qc_pixabay_key')||'' };
+      if (!keys.g && !keys.e) { Toast.warn('Save your keys first before exporting.'); return; }
+      try {
+        const code = await encrypt(JSON.stringify(keys), pin);
+        document.getElementById('ks-export-result').style.display = '';
+        buildQR(code);
+        const out = document.getElementById('ks-code-output'); if (out) out.value = code;
+        Toast.success('Ready! Scan the QR with your phone.');
+      } catch(e) { Toast.error('Encryption failed: ' + e.message); }
+    },
+    copyCode() {
+      const v = document.getElementById('ks-code-output').value;
+      navigator.clipboard.writeText(v).then(()=>Toast.success('Copied!')).catch(()=>{ document.getElementById('ks-code-output').select(); document.execCommand('copy'); Toast.success('Copied!'); });
+    },
+    startCamera() { startScan(); },
+    stopCamera()  { stopScan(); },
+    async importKeys() {
+      const pin  = document.getElementById('ks-import-pin').value.trim();
+      const code = _lastCode || document.getElementById('ks-import-code')?.value.trim() || '';
+      if (!pin)  { Toast.error('Enter your PIN.'); return; }
+      if (!code) { Toast.error('Scan a QR or paste a sync code first.'); return; }
+      try {
+        const json = await decrypt(code, pin);
+        const keys = JSON.parse(json);
+        if (keys.g)  lsSet('qc_gemini_key',  keys.g);
+        if (keys.e)  lsSet('qc_eleven_key',  keys.e);
+        if (keys.p)  lsSet('qc_pexels_key',  keys.p);
+        if (keys.pb) lsSet('qc_pixabay_key', keys.pb);
+        document.getElementById('ks-import-result').style.display = '';
+        Toast.success('Keys restored! Reload to use them.');
+      } catch(e) { Toast.error('Wrong PIN or invalid code.'); }
+    }
+  };
+})();
+window.KeySync = KeySync;
 window.App.generateOTP = OTP.generate.bind(OTP);
 window.App.showClaimOTP = OTP.showClaim.bind(OTP);
 window.App.claimOTP = OTP.claim.bind(OTP);
